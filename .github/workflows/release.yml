@@ -46,7 +46,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            ./publish/win-x64/FaraDeviceChecker.exe
             ./FaraDeviceChecker-${{ github.ref_name }}-win-x64.zip
           body: |
             ## FaraDeviceChecker ${{ github.ref_name }}
