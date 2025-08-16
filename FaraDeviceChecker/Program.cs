@@ -1,9 +1,6 @@
-﻿using System;
-using System.Management;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Management;
 
-namespace FaraAudioDriverChecker;
+namespace FaraDeviceChecker;
 
 public class AudioDeviceInfo
 {
@@ -29,9 +26,7 @@ internal static class Program
 
         try
         {
-            // Audioデバイスの情報を取得
             var audioDevices = GetAudioDevices();
-
             if (audioDevices.Count == 0)
             {
                 Console.WriteLine("Audioデバイスが見つかりませんでした。");
@@ -40,20 +35,14 @@ internal static class Program
 
             Console.WriteLine($"検出されたAudioデバイス数: {audioDevices.Count}\n");
 
-            // 各デバイスの状態を確認
             foreach (var device in audioDevices)
             {
                 AnalyzeAudioDevice(device);
                 Console.WriteLine(new string('=', 80));
             }
 
-            // 問題のあるデバイスの要約
             DisplayProblemSummary(audioDevices);
-            
-            // 統計情報の表示
             DisplayDeviceStatistics(audioDevices);
-
-            // 推奨事項の表示
             DisplayRecommendations(audioDevices);
         }
         catch (Exception ex)
@@ -68,8 +57,6 @@ internal static class Program
     private static List<AudioDeviceInfo> GetAudioDevices()
     {
         var devices = new List<AudioDeviceInfo>();
-
-        // Audioデバイス（Media、AudioEndpoint、SoftwareDevice）を取得
         string[] audioClasses = {"Media", "AudioEndpoint", "SoftwareDevice"};
 
         foreach (var audioClass in audioClasses)
@@ -95,7 +82,6 @@ internal static class Program
                     HardwareId = GetPropertyValue(device, "HardwareID")
                 };
 
-                // 問題コードを取得
                 if (device["ConfigManagerErrorCode"] != null)
                 {
                     var problemCode = (uint) device["ConfigManagerErrorCode"];
@@ -103,14 +89,11 @@ internal static class Program
                     deviceInfo.ProblemCode = GetProblemDescription(problemCode);
                 }
 
-                // ドライバー情報を取得
                 GetDriverInfo(deviceInfo);
-
                 devices.Add(deviceInfo);
             }
         }
 
-        // 重複を除去
         return RemoveDuplicates(devices);
     }
 
@@ -118,10 +101,8 @@ internal static class Program
     {
         try
         {
-            // DeviceIDをエスケープしてクエリを安全にする
             var escapedDeviceId = EscapeWqlString(device.DeviceId);
 
-            // Win32_PnPSignedDriverからドライバー情報を取得
             var query = $"SELECT * FROM Win32_PnPSignedDriver WHERE DeviceID = '{escapedDeviceId}'";
             using var searcher = new ManagementObjectSearcher(query);
             var collection = searcher.Get();
@@ -134,7 +115,6 @@ internal static class Program
                 break;
             }
 
-            // システムドライバーからも情報を取得（フォールバック）
             if (device.DriverVersion == "不明" && !string.IsNullOrEmpty(device.Service))
             {
                 var escapedService = EscapeWqlString(device.Service);
@@ -160,26 +140,23 @@ internal static class Program
         catch (Exception ex)
         {
             device.DriverVersion = $"取得エラー: {ex.Message}";
-            // 取得エラーのデバイスは注意が必要とマーク
             device.HasProblem = true;
             device.ProblemCode = "ドライバー情報取得エラー";
         }
     }
 
-    // WQLクエリ用の文字列エスケープ処理
     private static string EscapeWqlString(string input)
     {
         if (string.IsNullOrEmpty(input))
             return input;
 
-        // WQLで特殊文字をエスケープ
         return input
             .Replace("\\", "\\\\") // バックスラッシュ
-            .Replace("'", "''")    // シングルクォート
+            .Replace("'", "''") // シングルクォート
             .Replace("\"", "\\\"") // ダブルクォート
-            .Replace("%", "[%]")   // パーセント
-            .Replace("_", "[_]")   // アンダースコア
-            .Replace("&", "^&");   // アンパサンド
+            .Replace("%", "[%]") // パーセント
+            .Replace("_", "[_]") // アンダースコア
+            .Replace("&", "^&"); // アンパサンド
     }
 
     private static void AnalyzeAudioDevice(AudioDeviceInfo device)
@@ -193,7 +170,6 @@ internal static class Program
         Console.WriteLine($"クラス: {device.Class}");
         Console.WriteLine($"サービス: {device.Service}");
 
-        // 問題の分析
         var needsAttention = false;
         var issues = new List<string>();
 
@@ -209,7 +185,6 @@ internal static class Program
             needsAttention = true;
         }
 
-        // ドライバーの古さをチェック（概算）
         if (!string.IsNullOrEmpty(device.DriverDate) && device.DriverDate != "不明")
         {
             if (DateTime.TryParse(device.DriverDate, out var driverDate))
@@ -223,14 +198,12 @@ internal static class Program
             }
         }
 
-        // ドライバー情報取得エラーの場合も問題として扱う
         if (device.DriverVersion.StartsWith("取得エラー:"))
         {
             issues.Add("ドライバー情報が取得できませんでした");
             needsAttention = true;
         }
 
-        // 結果表示
         if (needsAttention)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
@@ -239,15 +212,14 @@ internal static class Program
             {
                 Console.WriteLine($"  - {issue}");
             }
-            Console.ResetColor();
         }
         else
         {
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("\n✅ 正常に動作しています");
-            Console.ResetColor();
         }
 
+        Console.ResetColor();
         Console.WriteLine();
     }
 
@@ -277,46 +249,42 @@ internal static class Program
             }
         }
     }
-    
+
     private static void DisplayDeviceStatistics(List<AudioDeviceInfo> devices)
     {
         Console.WriteLine("\n=== デバイス統計 ===");
-        
-        // クラス別の統計
+
         var classCount = new Dictionary<string, int>();
         var statusCount = new Dictionary<string, int>();
         var manufacturerCount = new Dictionary<string, int>();
-        
+
         foreach (var device in devices)
         {
-            // クラス別カウント
             var className = string.IsNullOrEmpty(device.Class) ? "不明" : device.Class;
             if (!classCount.TryAdd(className, 1))
                 classCount[className]++;
-            
-            // ステータス別カウント
+
             var status = string.IsNullOrEmpty(device.Status) ? "不明" : device.Status;
             if (!statusCount.TryAdd(status, 1))
                 statusCount[status]++;
-                
-            // 製造元別カウント
+
             var manufacturer = string.IsNullOrEmpty(device.Manufacturer) ? "不明" : device.Manufacturer;
             if (!manufacturerCount.TryAdd(manufacturer, 1))
                 manufacturerCount[manufacturer]++;
         }
-        
+
         Console.WriteLine("\nデバイスクラス別統計:");
         foreach (var kvp in classCount)
         {
             Console.WriteLine($"  {kvp.Key}: {kvp.Value}個");
         }
-        
+
         Console.WriteLine("\nステータス別統計:");
         foreach (var kvp in statusCount)
         {
             Console.WriteLine($"  {kvp.Key}: {kvp.Value}個");
         }
-        
+
         Console.WriteLine("\n製造元別統計:");
         foreach (var kvp in manufacturerCount)
         {
@@ -327,10 +295,11 @@ internal static class Program
     private static void DisplayRecommendations(List<AudioDeviceInfo> devices)
     {
         Console.WriteLine("\n=== 推奨事項 ===");
-        
-        var problemDevices = devices.FindAll(d => d.HasProblem || d.Status != "OK" || d.DriverVersion.StartsWith("取得エラー:"));
+
+        var problemDevices =
+            devices.FindAll(d => d.HasProblem || d.Status != "OK" || d.DriverVersion.StartsWith("取得エラー:"));
         var oldDriverDevices = devices.FindAll(d => IsDriverOld(d));
-        
+
         if (problemDevices.Count == 0 && oldDriverDevices.Count == 0)
         {
             Console.ForegroundColor = ConsoleColor.Green;
@@ -338,7 +307,7 @@ internal static class Program
             Console.ResetColor();
             return;
         }
-        
+
         if (problemDevices.Count > 0)
         {
             Console.ForegroundColor = ConsoleColor.Red;
@@ -352,7 +321,7 @@ internal static class Program
             Console.WriteLine("  5. 「コンピューター上の利用可能なドライバーの一覧から選択」");
             Console.WriteLine();
         }
-        
+
         if (oldDriverDevices.Count > 0)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
@@ -364,25 +333,22 @@ internal static class Program
             Console.WriteLine("  3. デバイスマネージャーからドライバーを更新");
             Console.WriteLine();
         }
-        
+
         Console.WriteLine("📋 一般的な対応手順:");
         Console.WriteLine("  • デバイスマネージャー: Windowsキー + X → デバイスマネージャー");
         Console.WriteLine("  • Windows Update: 設定 → Windows Update → 更新プログラムのチェック");
         Console.WriteLine("  • 製造元サイト: 各デバイスの製造元の公式サポートページ");
     }
-    
+
     private static bool IsDriverOld(AudioDeviceInfo device)
     {
         if (string.IsNullOrEmpty(device.DriverDate) || device.DriverDate == "不明")
             return false;
-            
-        if (DateTime.TryParse(device.DriverDate, out var driverDate))
-        {
-            var age = DateTime.Now - driverDate;
-            return age.TotalDays > 365;
-        }
-        
-        return false;
+
+        if (!DateTime.TryParse(device.DriverDate, out var driverDate)) return false;
+
+        var age = DateTime.Now - driverDate;
+        return age.TotalDays > 365;
     }
 
     private static string GetPropertyValue(ManagementObject obj, string propertyName)
@@ -423,58 +389,8 @@ internal static class Program
 
     private static List<AudioDeviceInfo> RemoveDuplicates(List<AudioDeviceInfo> devices)
     {
-        var uniqueDevices = new List<AudioDeviceInfo>();
         var seenDeviceIds = new HashSet<string>();
 
-        foreach (var device in devices)
-        {
-            if (seenDeviceIds.Add(device.DeviceId))
-            {
-                uniqueDevices.Add(device);
-            }
-        }
-
-        return uniqueDevices;
-    }
-}
-
-// 外部ツール起動用のヘルパークラス（参考用）
-public static class ExternalToolHelper
-{
-    public static void OpenDeviceManager()
-    {
-        try
-        {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "mmc.exe",
-                Arguments = "devmgmt.msc",
-                UseShellExecute = true
-            };
-            Process.Start(psi);
-            Console.WriteLine("デバイスマネージャーを開きました。");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"デバイスマネージャーを開けませんでした: {ex.Message}");
-        }
-    }
-
-    public static void OpenWindowsUpdate()
-    {
-        try
-        {
-            var psi = new ProcessStartInfo
-            {
-                FileName = "ms-settings:windowsupdate",
-                UseShellExecute = true
-            };
-            Process.Start(psi);
-            Console.WriteLine("Windows Update設定画面を開きました。");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Windows Updateを開けませんでした: {ex.Message}");
-        }
+        return devices.Where(device => seenDeviceIds.Add(device.DeviceId)).ToList();
     }
 }
