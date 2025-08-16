@@ -39,25 +39,25 @@ jobs:
 
       - name: Create ZIP archive
         run: |
-          Compress-Archive -Path "./publish/win-x64/FaraDeviceChecker.exe", "README.md" -DestinationPath "./FaraDeviceChecker-${{ github.ref_name }}-win-x64.zip"
+          Compress-Archive -Path "./publish/win-x64/FaraAudioDeviceChecker.exe", "README.md" -DestinationPath "./FaraAudioDeviceChecker-${{ github.ref_name }}-win-x64.zip"
         shell: pwsh
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            ./FaraDeviceChecker-${{ github.ref_name }}-win-x64.zip
+            ./FaraAudioDeviceChecker-${{ github.ref_name }}-win-x64.zip
           body: |
-            ## FaraDeviceChecker ${{ github.ref_name }}
+            ## FaraAudioDeviceChecker ${{ github.ref_name }}
             
             Windows用オーディオデバイス診断ツール
             
             ### ダウンロード
-            - **FaraDeviceChecker-${{ github.ref_name }}-win-x64.zip**: Windows 64bit版
+            - **FaraAudioDeviceChecker-${{ github.ref_name }}-win-x64.zip**: Windows 64bit版
             
             ### 使用方法
             1. ZIPファイルをダウンロード・解凍
-            2. `FaraDeviceChecker.exe` をダブルクリックで実行
+            2. `FaraAudioDeviceChecker.exe` をダブルクリックで実行
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
