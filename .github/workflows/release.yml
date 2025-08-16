@@ -1,30 +1,56 @@
-﻿name: Release
+﻿name: Build and Release
 
 on:
   push:
     tags:
-      - 'v*'
+      - 'v*.*.*'
 
 jobs:
-  build:
+  build-and-release:
     runs-on: windows-latest
     
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 6.0.x
+          dotnet-version: '6.0.x'
 
       - name: Restore dependencies
         run: dotnet restore
 
-      - name: Build
-        run: dotnet publish -c Release -r win-x64 --self-contained -p:PublishSingleFile=true
+      - name: Build and Publish
+        run: |
+          dotnet publish -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -o ./publish/win-x64
+
+      - name: List files (debugging)
+        run: |
+          ls -la ./publish/win-x64/
+
+      - name: Create ZIP archive
+        run: |
+          Compress-Archive -Path "./publish/win-x64/FaraDeviceChecker.exe", "README.md" -DestinationPath "./FaraDeviceChecker-${{ github.ref_name }}-win-x64.zip"
+        shell: pwsh
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            bin/Release/net6.0/win-x64/publish/FaraDeviceChecker.exe
+            ./publish/win-x64/FaraDeviceChecker.exe
+            ./FaraDeviceChecker-${{ github.ref_name }}-win-x64.zip
+          body: |
+            ## FaraDeviceChecker ${{ github.ref_name }}
+            
+            Windows用オーディオデバイス診断ツール
+            
+            ### ダウンロード
+            - **FaraDeviceChecker-${{ github.ref_name }}-win-x64.zip**: Windows 64bit版
+            
+            ### 使用方法
+            1. ZIPファイルをダウンロード・解凍
+            2. `FaraDeviceChecker.exe` をダブルクリックで実行
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
