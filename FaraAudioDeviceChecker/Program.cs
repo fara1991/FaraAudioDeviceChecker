@@ -10,8 +10,7 @@ internal static class Program
     {
         // 依存性注入のセットアップ
         IDeviceService deviceService = new DeviceService();
-        var view = new ConsoleView();
-        var controller = new AudioDeviceController(deviceService, view);
+        var controller = new AudioDeviceController(deviceService);
 
         // アプリケーション実行
         controller.Run();

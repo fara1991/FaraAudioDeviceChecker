@@ -3,7 +3,7 @@ namespace FaraAudioDeviceChecker.Controllers;
 using Services;
 using Views;
 
-public class AudioDeviceController(IDeviceService deviceService, ConsoleView view)
+public class AudioDeviceController(IDeviceService deviceService)
 {
     public void Run()
     {
