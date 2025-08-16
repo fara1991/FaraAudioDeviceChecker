@@ -27,7 +27,8 @@ jobs:
 
       - name: List files (debugging)
         run: |
-          ls -la ./publish/win-x64/
+          Get-ChildItem -Path "./publish/win-x64/" -Recurse
+        shell: pwsh
 
       - name: Create ZIP archive
         run: |
